@@ -1,0 +1,44 @@
+spring:
+   profiles:
+      active: dev
+
+---
+
+spring:
+   profiles: dev
+   datasource:
+      url: jdbc:postgresql://localhost:5432/postgres
+      username: postgres
+      password: password
+      hikari:
+         connectionTimeout: 20000
+         maximumPoolSize: 5
+         idleTimeout: 60000
+         maxLifetime: 180000
+   jpa:
+      generate-ddl: true
+      hibernate:
+         ddl-auto: update
+      properties:
+         hibernate:
+            format_sql: true
+            show_sql: true
+            enable_lazy_load_no_trans: true
+            temp:
+               use_jdbc_metadata_defaults: false
+            dialect: org.hibernate.dialect.PostgreSQLDialect
+      
+server:
+   port: 3000
+
+---
+
+spring:
+   profiles: prod
+   datasource:
+      url: jdbc:postgresql://localhost:5432/postgres
+      username: postgres
+      password: password
+      
+server:
+   port: 9000
