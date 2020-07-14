@@ -3,10 +3,9 @@ package silupa.co.id.securityservice.model;
 import javax.validation.constraints.NotBlank;
 
 import io.swagger.annotations.ApiModelProperty;
-import io.swagger.annotations.ApiOperation;
 
-public class SignInRequest {
-	
+public class ChangePasswordRequest {
+
 	@ApiModelProperty(required=true, position=0)
 	@NotBlank
 	private String usernameOrEmail;
@@ -30,6 +29,4 @@ public class SignInRequest {
 	public void setPassword(String password) {
 		this.password = password;
 	}
-	
-	
 }

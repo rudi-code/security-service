@@ -4,29 +4,54 @@ import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
+import io.swagger.annotations.ApiModelProperty;
+
 public class SignUpRequest {
 	
+	@ApiModelProperty(required=true, position=0)
 	@NotBlank
-	@Size(min = 4, max = 50)
-	private String fullName;
+	@Size(min = 4, max = 30)
+	private String fullname;
 	
+	@ApiModelProperty(required=true, position=1)
 	@NotBlank
 	@Size(max = 25)
 	private String username;
 	
+	@ApiModelProperty(required=true, position=2)
+	@NotBlank
+	private String password;
+	
+	@ApiModelProperty(required=true, position=3)
 	@NotBlank
 	@Email
 	private String email;
 	
+	@ApiModelProperty(required=true, position=4)
 	@NotBlank
-	private String password;
+	private String noTelepon;
+	
+	@ApiModelProperty(required=true, position=5)
+	@NotBlank
+	private String smartphone;
+	
+	@ApiModelProperty(required=true, position=6)
+	@NotBlank
+	private String role;
+	
+	@ApiModelProperty(required=true, position=7)
+	@NotBlank
+	private String alamat;
+	
+	
+	
 
-	public String getFullName() {
-		return fullName;
+	public String getFullname() {
+		return fullname;
 	}
 
-	public void setFullName(String fullName) {
-		this.fullName = fullName;
+	public void setFullname(String fullname) {
+		this.fullname = fullname;
 	}
 
 	public String getUsername() {
@@ -53,21 +78,36 @@ public class SignUpRequest {
 		this.password = password;
 	}
 
-	@Override
-	public String toString() {
-		StringBuilder builder = new StringBuilder();
-		builder.append("SignUpRequest [fullName=");
-		builder.append(fullName);
-		builder.append(", username=");
-		builder.append(username);
-		builder.append(", email=");
-		builder.append(email);
-		builder.append(", password=");
-		builder.append(password);
-		builder.append("]");
-		return builder.toString();
+	public String getAlamat() {
+		return alamat;
 	}
-	
-	
+
+	public void setAlamat(String alamat) {
+		this.alamat = alamat;
+	}
+
+	public String getNoTelepon() {
+		return noTelepon;
+	}
+
+	public void setNoTelepon(String noTelepon) {
+		this.noTelepon = noTelepon;
+	}
+
+	public String getSmartphone() {
+		return smartphone;
+	}
+
+	public void setSmartphone(String smartphone) {
+		this.smartphone = smartphone;
+	}
+
+	public String getRole() {
+		return role;
+	}
+
+	public void setRole(String role) {
+		this.role = role;
+	}
 
 }

@@ -15,31 +15,29 @@ import org.hibernate.annotations.NaturalId;
 public class Role {
 	
     @Id
+    @Column(name = "ID")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private int id;
 
-    @NaturalId
-    @Column(length = 60)
-    private String name;
+    @Column(name = "ROLE", length = 15, nullable = false)
+    private String role;
 
-    public Role() {
-    	super();
-    }
-
-	public Long getId() {
+	public int getId() {
 		return id;
 	}
 
-	public void setId(Long id) {
+	public void setId(int id) {
 		this.id = id;
 	}
 
-	public String getName() {
-		return name;
+	public String getRole() {
+		return role;
 	}
 
-	public void setName(String name) {
-		this.name = name;
+	public void setRole(String role) {
+		this.role = role;
 	}
+
+   
 
 }

@@ -1,6 +1,10 @@
 spring:
    profiles:
       active: dev
+      
+## server port 
+server:
+   port: 3000
 
 ---
 
@@ -18,6 +22,7 @@ spring:
    jpa:
       generate-ddl: true
       hibernate:
+#         ddl-auto: create
          ddl-auto: update
       properties:
          hibernate:
@@ -27,9 +32,11 @@ spring:
             temp:
                use_jdbc_metadata_defaults: false
             dialect: org.hibernate.dialect.PostgreSQLDialect
-      
-server:
-   port: 3000
+   
+## App Properties
+app:
+   jwtSecret: JWTSuperSecretKey
+   jwtExpiration: 604800000
 
 ---
 

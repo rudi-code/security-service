@@ -11,11 +11,13 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import silupa.co.id.securityservice.config.security.RestAuthenticationEntryPoint;
 import silupa.co.id.securityservice.utils.StaticVariabel;
 
 
@@ -26,18 +28,21 @@ import silupa.co.id.securityservice.utils.StaticVariabel;
 @EnableGlobalMethodSecurity(securedEnabled=true, jsr250Enabled = true, prePostEnabled = true)
 public class SecurityConfig extends WebSecurityConfigurerAdapter implements WebMvcConfigurer {
 	
-	@Autowired
-    public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
-        auth.inMemoryAuthentication()
-                .withUser("user")
-                .password( "{noop}password" )
-                .roles("USER");
-    }
+//	@Autowired
+//    public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
+//        auth.inMemoryAuthentication()
+//                .withUser("user")
+//                .password( "{noop}password" )
+//                .roles("USER");
+//    }
 	
 //	@Override
 //	protected void configure(final AuthenticationManagerBuilder auth) throws Exception {
 //		auth.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder);
 //	}
+	
+	@Autowired
+	public RestAuthenticationEntryPoint unauthorizedHandler;
 	
 	@Bean
 	public PasswordEncoder passwordEncoder() {
@@ -56,6 +61,12 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter implements WebM
         	.and()
         	.csrf()
         	.disable()
+        	.exceptionHandling()
+			.authenticationEntryPoint(unauthorizedHandler)
+			.and()
+			.sessionManagement()
+				.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+				.and()
         	.authorizeRequests()
         	.antMatchers("/**",
                         "/favicon.ico",
@@ -65,9 +76,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter implements WebM
                         "/**/*.jpg",
                         "/**/*.html",
                         "/**/*.css",
-                        "/**/*.js")
-        	.permitAll()
+                        "/**/*.js").permitAll()
         	.antMatchers("/api-docs/**").permitAll()
+        	.antMatchers("/**").permitAll()
             .anyRequest().authenticated()
             .and().anonymous().disable();
     }
