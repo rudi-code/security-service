@@ -1,130 +1,106 @@
-package silupa.co.id.securityservice.service.Impl;
+package silupa.co.id.securityservice.service.impl;
 
-import java.util.Collections;
-import java.util.Date;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.Locale;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import lombok.RequiredArgsConstructor;
 import silupa.co.id.securityservice.config.security.JwtTokenProvider;
-import silupa.co.id.securityservice.dao.RoleDao;
-import silupa.co.id.securityservice.dao.UserDao;
-import silupa.co.id.securityservice.model.ChangePasswordRequest;
-import silupa.co.id.securityservice.model.Role;
-import silupa.co.id.securityservice.model.SignInRequest;
-import silupa.co.id.securityservice.model.SignUpRequest;
-import silupa.co.id.securityservice.model.User;
+import silupa.co.id.securityservice.config.security.UserPrincipal;
+import silupa.co.id.securityservice.constants.AppConstants;
+import silupa.co.id.securityservice.dto.request.ChangePasswordRequest;
+import silupa.co.id.securityservice.dto.request.SignInRequest;
+import silupa.co.id.securityservice.dto.request.SignUpRequest;
+import silupa.co.id.securityservice.entity.Role;
+import silupa.co.id.securityservice.entity.User;
+import silupa.co.id.securityservice.repository.RoleRepository;
+import silupa.co.id.securityservice.repository.UserRepository;
+import silupa.co.id.securityservice.service.UserAlreadyExistsException;
 import silupa.co.id.securityservice.service.UserService;
-import silupa.co.id.securityservice.utils.StaticVariabel;
 
 @Service
+@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
-	
-	@Autowired
-	UserDao userDao;
-	@Autowired
-	RoleDao roleDao;
-	@Autowired
-	PasswordEncoder passwordEncoder;
-	@Autowired
-	AuthenticationManager authenticationManager;
-	@Autowired
-	JwtTokenProvider jwtTokenProvider;
-	
+
+	private final UserRepository userRepository;
+	private final RoleRepository roleRepository;
+	private final PasswordEncoder passwordEncoder;
+	private final AuthenticationManager authenticationManager;
+	private final JwtTokenProvider jwtTokenProvider;
 
 	@Override
-	public boolean existByUserName(String username) {
-		// TODO Auto-generated method stub
-		if(userDao.existsByUsername(username)) return true;
-		return false;
-	}
-
-	@Override
-	public boolean existByEmail(String email) {
-		// TODO Auto-generated method stub
-		if(userDao.existsByEmail(email)) return true;
-		return false;
-	}
-
-	@Override
+	@Transactional
 	public User signUp(@Valid SignUpRequest signUp) {
-		// TODO Auto-generated method stub
-		
+		String username = normalize(signUp.getUsername());
+		String email = normalize(signUp.getEmail());
+		if (userRepository.existsByUsernameIgnoreCase(username) || userRepository.existsByEmailIgnoreCase(email)) {
+			throw new UserAlreadyExistsException();
+		}
+
+		Role defaultRole = roleRepository.findByRole(AppConstants.ROLE_USER)
+			.orElseThrow(() -> new IllegalStateException(
+				"Default role " + AppConstants.ROLE_USER + " is not configured"));
+		Instant now = Instant.now();
 		User user = new User();
-		user.setUsername(signUp.getUsername());
-		user.setEmail(signUp.getEmail());
-		user.setFullname(signUp.getFullname());
+		user.setUsername(username);
+		user.setEmail(email);
+		user.setFullname(signUp.getFullname().strip());
 		user.setPassword(passwordEncoder.encode(signUp.getPassword()));
-		user.setActive("1");
-		user.setAlamat(signUp.getAlamat());
-		user.setCreatedBy("Admin");
-		
-		user.setCreatedDate(new Date());
-		user.setLastModified(new Date());
-		user.setLastModifiedBy("Admin");
-		user.setNoTelepon(signUp.getNoTelepon());
-		user.setSmartphone(signUp.getSmartphone());
-		
-		Role role = roleDao.findByRole(signUp.getRole());
-		user.setRoleId(role.getId());
-//		user.setRoleId(2);
+		user.setActive(true);
+		user.setAlamat(signUp.getAlamat().strip());
+		user.setNoTelepon(signUp.getNoTelepon().strip());
+		user.setSmartphone(signUp.getSmartphone().strip());
+		user.setRole(defaultRole);
+		user.setCreatedBy("SYSTEM");
+		user.setCreatedDate(now);
+		user.setLastModified(now);
+		user.setLastModifiedBy("SYSTEM");
 
-//		Role role = roleDao.findByName(StaticVariabel.ROLE_ADMIN)
-//				/*.orElseThrow(() -> new AppException("User Role not set."))*/;
-//		user.setRoles(Collections.singleton(role));
-		System.out.println("SAVE USER  "+ user);
-		User entity = userDao.save(user);
-
-
-		return entity;
+		return userRepository.save(user);
 	}
 
 	@Override
-	public String autentication(@Valid SignInRequest signIn) {
-		// TODO Auto-generated method stub
-		try {
-			Authentication authentication = authenticationManager.authenticate(
-					new UsernamePasswordAuthenticationToken(
-							signIn.getUsernameOrEmail(), 
-							signIn.getPassword()));
-			SecurityContextHolder.getContext().setAuthentication(authentication);
-			String token = jwtTokenProvider.generateToken(authentication);
-			return token;
-		} catch (Exception e) {
-			// TODO: handle exception
-			return StaticVariabel.MESSAGE_FAILED;
+	public String authenticate(@Valid SignInRequest signIn) {
+		if (signIn.getPassword().getBytes(StandardCharsets.UTF_8).length > 72) {
+			throw new BadCredentialsException("Invalid username/email or password");
 		}
-		
-		
+		String usernameOrEmail = normalize(signIn.getUsernameOrEmail());
+		Authentication authentication = authenticationManager.authenticate(
+			UsernamePasswordAuthenticationToken.unauthenticated(usernameOrEmail, signIn.getPassword()));
+		return jwtTokenProvider.generateToken((UserPrincipal) authentication.getPrincipal());
 	}
 
 	@Override
-	public boolean existByUsernameOrEmail(String usernameOrEmail) {
-		// TODO Auto-generated method stub
-
-		return userDao.existByUsernameOrEmail(usernameOrEmail) < 1;
-	}
-
-	@Override
-	public boolean changePassword(@Valid ChangePasswordRequest changePassword) {
-		// TODO Auto-generated method stub
-		try {
-			userDao.updatePassword(changePassword.getUsernameOrEmail(), 
-					passwordEncoder.encode(changePassword.getPassword()));
-			return false;
-		} catch (Exception e) {
-			// TODO: handle exception
-			return true;
+	@Transactional
+	public void changePassword(String userId, @Valid ChangePasswordRequest changePassword) {
+		if (changePassword.getCurrentPassword().getBytes(StandardCharsets.UTF_8).length > 72) {
+			throw new BadCredentialsException("Current password is incorrect");
 		}
-		
-		
+
+		User user = userRepository.findById(userId)
+			.orElseThrow(() -> new UsernameNotFoundException("Authenticated user no longer exists"));
+		if (!passwordEncoder.matches(changePassword.getCurrentPassword(), user.getPassword())) {
+			throw new BadCredentialsException("Current password is incorrect");
+		}
+
+		user.setPassword(passwordEncoder.encode(changePassword.getNewPassword()));
+		user.setLastModified(Instant.now());
+		user.setLastModifiedBy(userId);
+		userRepository.save(user);
 	}
 
+	private String normalize(String value) {
+		return value.strip().toLowerCase(Locale.ROOT);
+	}
 }

@@ -1,62 +1,43 @@
 package silupa.co.id.securityservice.config.security;
 
-import java.util.Date;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.stream.Collectors;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.stereotype.Component;
-
-import io.jsonwebtoken.*;
 
 @Component
 public class JwtTokenProvider {
-	private static final Logger logger = LoggerFactory.getLogger(JwtTokenProvider.class);
-	
-	@Value("${app.jwtSecret}")
-	private String jwtSecret;
-	
-	@Value("${app.jwtExpiration}")
-	private int jwtExpiration;
-	
-	public String generateToken(Authentication authentication) {
-		
-		UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
-		Date now = new Date();
-		Date expiryDate = new Date(now.getTime() + jwtExpiration);
-		
-		return Jwts.builder()
-				.setSubject( userPrincipal.getUserId())
-				.setIssuedAt(new Date())
-				.setExpiration(expiryDate)
-				.signWith(SignatureAlgorithm.HS512, jwtSecret)
-				.compact();	
+
+	private final JwtEncoder jwtEncoder;
+	private final long jwtExpiration;
+
+	public JwtTokenProvider(
+			JwtEncoder jwtEncoder,
+			@Value("${app.jwtExpiration}") long jwtExpiration) {
+		this.jwtEncoder = jwtEncoder;
+		this.jwtExpiration = jwtExpiration;
 	}
-	
-	public String getUserIdFromJWT(String token) {
-        Claims claims = Jwts.parser()
-                .setSigningKey(jwtSecret)
-                .parseClaimsJws(token)
-                .getBody();
-        return claims.getSubject();
-    }
-	
-	 public boolean validateToken(String authToken) {
-	        try {
-	            Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(authToken);
-	            return true;
-	        } catch (SignatureException ex) {
-	            logger.error("Invalid JWT signature");
-	        } catch (MalformedJwtException ex) {
-	            logger.error("Invalid JWT token");
-	        } catch (ExpiredJwtException ex) {
-	            logger.error("Expired JWT token");
-	        } catch (UnsupportedJwtException ex) {
-	            logger.error("Unsupported JWT token");
-	        } catch (IllegalArgumentException ex) {
-	            logger.error("JWT claims string is empty.");
-	        }
-	        return false;
-	    }
+
+	public String generateToken(UserPrincipal userPrincipal) {
+		Instant issuedAt = Instant.now();
+		JwtClaimsSet claims = JwtClaimsSet.builder()
+			.subject(userPrincipal.getUserId())
+			.claim("roles", userPrincipal.getAuthorities().stream()
+				.map(GrantedAuthority::getAuthority)
+				.collect(Collectors.toList()))
+			.issuedAt(issuedAt)
+			.expiresAt(issuedAt.plus(jwtExpiration, ChronoUnit.MILLIS))
+			.build();
+		JwsHeader header = JwsHeader.with(MacAlgorithm.HS512).build();
+
+		return jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
+	}
 }

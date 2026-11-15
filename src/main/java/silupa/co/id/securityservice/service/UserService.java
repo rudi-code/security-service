@@ -1,25 +1,18 @@
 package silupa.co.id.securityservice.service;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
-import silupa.co.id.securityservice.model.ChangePasswordRequest;
-import silupa.co.id.securityservice.model.SignInRequest;
-import silupa.co.id.securityservice.model.SignUpRequest;
-import silupa.co.id.securityservice.model.User;
+import silupa.co.id.securityservice.dto.request.ChangePasswordRequest;
+import silupa.co.id.securityservice.dto.request.SignInRequest;
+import silupa.co.id.securityservice.dto.request.SignUpRequest;
+import silupa.co.id.securityservice.entity.User;
 
 public interface UserService {
 
-	boolean existByUserName(String username);
-
-	boolean existByEmail(String email);
-
 	User signUp(@Valid SignUpRequest signUp);
 
-	String autentication(@Valid SignInRequest signIn);
+	String authenticate(@Valid SignInRequest signIn);
 
-	boolean existByUsernameOrEmail(String usernameOrEmail);
-
-	boolean changePassword(@Valid ChangePasswordRequest changePassword);
-
+	void changePassword(String userId, @Valid ChangePasswordRequest changePassword);
 
 }

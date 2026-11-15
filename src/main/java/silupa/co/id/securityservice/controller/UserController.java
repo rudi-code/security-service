@@ -1,103 +1,85 @@
 package silupa.co.id.securityservice.controller;
 
-import javax.validation.Valid;
+import java.sql.SQLException;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
+
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import silupa.co.id.securityservice.model.ChangePasswordRequest;
-import silupa.co.id.securityservice.model.SignInRequest;
-import silupa.co.id.securityservice.model.SignUpRequest;
-import silupa.co.id.securityservice.model.response.ApiResponse;
-import silupa.co.id.securityservice.model.response.AuthenticationResponse;
+import lombok.RequiredArgsConstructor;
+import silupa.co.id.securityservice.constants.AppConstants;
+import silupa.co.id.securityservice.dto.request.ChangePasswordRequest;
+import silupa.co.id.securityservice.dto.request.SignInRequest;
+import silupa.co.id.securityservice.dto.request.SignUpRequest;
+import silupa.co.id.securityservice.dto.response.ApiResponse;
+import silupa.co.id.securityservice.dto.response.AuthenticationResponse;
+import silupa.co.id.securityservice.service.UserAlreadyExistsException;
 import silupa.co.id.securityservice.service.UserService;
-import silupa.co.id.securityservice.utils.StaticVariabel;;
-
 
 @RestController
-@CrossOrigin
+@RequiredArgsConstructor
 public class UserController {
 
-	@Autowired
-	private UserService userService;
-	
-	@PostMapping(StaticVariabel.SIGN_UP_PATH)
+	private final UserService userService;
+
+	@PostMapping(AppConstants.SIGN_UP_PATH)
 	public ResponseEntity<ApiResponse> signup(@Valid @RequestBody SignUpRequest signUp) {
-		ApiResponse apiResponse = new ApiResponse();
-		if(userService.existByUserName(signUp.getUsername())) {
-			apiResponse.setSuccess(false);
-			apiResponse.setMessage(StaticVariabel.MESSAGE_USERNAME
-					+StaticVariabel.SEPARATOR_SPACE
-					+StaticVariabel.MESSAGE_ALREADY_EXIST);
-		}else if (userService.existByEmail(signUp.getEmail())) {
-			apiResponse.setSuccess(false);
-			apiResponse.setMessage(StaticVariabel.MESSAGE_EMAIL
-					+StaticVariabel.SEPARATOR_SPACE
-					+StaticVariabel.MESSAGE_ALREADY_EXIST);
-		}else {
+		try {
 			userService.signUp(signUp);
-			apiResponse.setSuccess(true);
-			apiResponse.setMessage(StaticVariabel.MESSAGE_USERNAME
-					+StaticVariabel.SEPARATOR_SPACE
-					+StaticVariabel.MESSAGE_SUCCESS
-					+StaticVariabel.SEPARATOR_SPACE
-					+StaticVariabel.MESSAGE_REGISTER);
+			return ResponseEntity.status(HttpStatus.CREATED)
+				.body(new ApiResponse(true, "User registered successfully", null));
+		} catch (UserAlreadyExistsException | DataIntegrityViolationException ex) {
+			if (ex instanceof DataIntegrityViolationException && !isUniqueConstraintViolation(ex)) {
+				throw ex;
+			}
+			return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(new ApiResponse(false, "Username or email is already registered", null));
 		}
-		return new ResponseEntity<ApiResponse>(apiResponse, HttpStatus.OK);
 	}
-	
-	@PostMapping(StaticVariabel.SIGN_IN_PATH)
-	public ResponseEntity<Object> signin(@Valid @RequestBody SignInRequest signIn) {
-		
-		ApiResponse apiResponse = new ApiResponse();
-		if(userService.existByUsernameOrEmail(signIn.getUsernameOrEmail())) {
-			
-			apiResponse.setSuccess(false);
-			apiResponse.setMessage("Username or email didn't exist.");
-			
-		}else {
-			String auth = userService.autentication(signIn);
-			if(auth.equals(StaticVariabel.MESSAGE_FAILED)) {
-				apiResponse.setSuccess(false);
-				apiResponse.setMessage("Password Wrong.");
-			}else {
-				AuthenticationResponse response = 
-						new AuthenticationResponse(auth, StaticVariabel.TOKEN_PREFIX);
-				apiResponse.setSuccess(true);
-				apiResponse.setMessage("Token ready");
-				apiResponse.setPayload(response);
+
+	private boolean isUniqueConstraintViolation(Throwable error) {
+		for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+			if (cause instanceof SQLException sqlException && "23505".equals(sqlException.getSQLState())) {
+				return true;
 			}
 		}
-		
-		
-		return new ResponseEntity<>(apiResponse, HttpStatus.OK);
+		return false;
 	}
-	
-	@PostMapping(StaticVariabel.CHANGE_PASSWORD)
-	public ResponseEntity<ApiResponse> changePassword(@Valid @RequestBody ChangePasswordRequest changePassword) {
-		
-		ApiResponse apiResponse = new ApiResponse();
-		
-		if(userService.existByUsernameOrEmail(changePassword.getUsernameOrEmail())) {
-			apiResponse.setSuccess(false);
-			apiResponse.setMessage("Username or email didn't exist.");
-		}else if(userService.changePassword(changePassword)){
-			apiResponse.setSuccess(true);
-			apiResponse.setMessage("Change Password Success.");
-		}else {
 
-			apiResponse.setSuccess(false);
-			apiResponse.setMessage("Change Password Failed.");
-			
+	@PostMapping(AppConstants.SIGN_IN_PATH)
+	public ResponseEntity<ApiResponse> signin(@Valid @RequestBody SignInRequest signIn) {
+		try {
+			String token = userService.authenticate(signIn);
+			AuthenticationResponse payload = new AuthenticationResponse(token, AppConstants.TOKEN_PREFIX);
+			return ResponseEntity.ok(new ApiResponse(true, "Token ready", payload));
+		} catch (AuthenticationException ex) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+				.body(new ApiResponse(false, "Invalid username/email or password", null));
 		}
-		return new ResponseEntity<>(apiResponse, HttpStatus.OK);
-		
 	}
-	
+
+	@PostMapping(AppConstants.CHANGE_PASSWORD_PATH)
+	public ResponseEntity<ApiResponse> changePassword(
+			@AuthenticationPrincipal Jwt jwt,
+			@Valid @RequestBody ChangePasswordRequest changePassword) {
+		try {
+			userService.changePassword(jwt.getSubject(), changePassword);
+			return ResponseEntity.ok(new ApiResponse(true, "Change password success", null));
+		} catch (BadCredentialsException ex) {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(new ApiResponse(false, "Current password is incorrect", null));
+		} catch (AuthenticationException ex) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+				.body(new ApiResponse(false, "Authentication is no longer valid", null));
+		}
+	}
 }

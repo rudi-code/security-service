@@ -1,9 +1,8 @@
 package silupa.co.id.securityservice.config.security;
 
 import java.util.Collection;
-import java.util.List;
+import java.util.Collections;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -11,7 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import silupa.co.id.securityservice.model.User;
+import silupa.co.id.securityservice.entity.User;
 
 public class UserPrincipal implements UserDetails {
 	
@@ -20,6 +19,8 @@ public class UserPrincipal implements UserDetails {
     private String fullname;
 
     private String username;
+	private String role;
+	private boolean enabled;
 
     @JsonIgnore
     private String email;
@@ -27,32 +28,28 @@ public class UserPrincipal implements UserDetails {
     @JsonIgnore
     private String password;
 
-//    private Collection<? extends GrantedAuthority> authorities;
-
-	public UserPrincipal(String userid, String fullName, String username, String email,
-			String password/* , Collection<? extends GrantedAuthority> authorities */) {
+	public UserPrincipal(String userid, String fullName, String username, String email, String password,
+			String role, boolean enabled) {
         this.userid = userid;
         this.fullname = fullName;
         this.username = username;
         this.email = email;
         this.password = password;
-//        this.authorities = authorities;
+		this.role = role;
+		this.enabled = enabled;
     }
 
     public static UserPrincipal create(User user) {
-		/*
-		 * List<GrantedAuthority> authorities = ( user.getRoles()).stream().map(role ->
-		 * new SimpleGrantedAuthority( (role).getName()) ).collect(Collectors.toList());
-		 */
-
         return new UserPrincipal(
                 user.getUserId(),
                 user.getFullname(),
                 user.getUsername(),
                 user.getEmail(),
-				user.getPassword()/*
-									 * , authorities
-									 */
+				user.getPassword(),
+				user.getRole().getRole().startsWith("ROLE_")
+					? user.getRole().getRole()
+					: "ROLE_" + user.getRole().getRole(),
+				user.isActive()
         );
     }
 
@@ -78,11 +75,6 @@ public class UserPrincipal implements UserDetails {
         return password;
     }
 
-	/*
-	 * @Override public Collection<? extends GrantedAuthority> getAuthorities() {
-	 * return authorities; }
-	 */
-
     @Override
     public boolean isAccountNonExpired() {
         return true;
@@ -100,7 +92,7 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return enabled;
     }
 
     @Override
@@ -119,7 +111,6 @@ public class UserPrincipal implements UserDetails {
 
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
-		// TODO Auto-generated method stub
-		return null;
+		return Collections.singletonList(new SimpleGrantedAuthority(role));
 	}
 }

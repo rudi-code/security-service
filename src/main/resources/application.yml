@@ -1,51 +1,26 @@
-spring:
-   profiles:
-      active: dev
-      
-## server port 
 server:
-   port: 3000
-
----
+  port: 3000
 
 spring:
-   profiles: dev
-   datasource:
-      url: jdbc:postgresql://localhost:5432/postgres
-      username: postgres
-      password: password
-      hikari:
-         connectionTimeout: 20000
-         maximumPoolSize: 5
-         idleTimeout: 60000
-         maxLifetime: 180000
-   jpa:
-      generate-ddl: true
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres?currentSchema=auth
+    username: postgres
+    password: admin
+    hikari:
+      connectionTimeout: 20000
+      maximumPoolSize: 5
+      idleTimeout: 60000
+      maxLifetime: 180000
+  jpa:
+    generate-ddl: true
+    hibernate:
+      ddl-auto: update
+    properties:
       hibernate:
-#         ddl-auto: create
-         ddl-auto: update
-      properties:
-         hibernate:
-            format_sql: true
-            show_sql: true
-            enable_lazy_load_no_trans: true
-            temp:
-               use_jdbc_metadata_defaults: false
-            dialect: org.hibernate.dialect.PostgreSQLDialect
-   
-## App Properties
+        format_sql: true
+        show_sql: true
+
 app:
-   jwtSecret: JWTSuperSecretKey
-   jwtExpiration: 604800000
-
----
-
-spring:
-   profiles: prod
-   datasource:
-      url: jdbc:postgresql://localhost:5432/postgres
-      username: postgres
-      password: password
-      
-server:
-   port: 9000
+  # Replace with a Base64-encoded key that decodes to at least 64 bytes.
+  jwtSecret: "GiFviYAet+CLgieW0YJQGphPQgyp0D8E/n7s8+kEJn1/TeDT2vRVKvvQVaOA5FWrSxLboK0xg3Y/jobyp68bKg=="
+  jwtExpiration: 604800000
