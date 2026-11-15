@@ -8,12 +8,17 @@ Spring Security mengamankan request. JWT diterbitkan oleh service ini melalui en
 
 ## Teknologi
 
-- Java 18 dan Spring Boot 4.1.2
-- Spring MVC, Spring Security, Spring Data JPA, dan Jakarta Bean Validation
-- Lombok untuk getter/setter dan constructor dependency injection
-- PostgreSQL
-- JWT dengan tanda tangan HS512
-- springdoc OpenAPI dan Swagger UI dengan konfigurasi default
+- Java 25 dan Maven
+- Spring Boot 4.1.2
+- Spring MVC untuk REST API
+- Spring Security untuk autentikasi dan otorisasi, termasuk OAuth2 Resource Server untuk memvalidasi JWT
+- Spring Data JPA dan Hibernate ORM untuk akses database PostgreSQL
+- Jakarta Bean Validation untuk validasi request
+- JWT bertanda tangan HS512, diterbitkan melalui Spring Security `JwtEncoder` dan ditandatangani dengan Nimbus JOSE
+- BCrypt untuk hashing password
+- Lombok untuk mengurangi boilerplate Java
+- springdoc OpenAPI 3.2.0 dan Swagger UI
+- JUnit, Mockito, AssertJ, dan Spring Boot Test untuk pengujian
 
 ## Gambaran arsitektur
 
@@ -77,7 +82,7 @@ silupa.co.id.securityservice
 
 ## Ringkasan refactor
 
-- Project diperbarui ke Spring Boot 4.1.2 dan Java 18, termasuk penyesuaian namespace Jakarta.
+- Project diperbarui ke Spring Boot 4.1.2 dan Java 25, termasuk penyesuaian namespace Jakarta.
 - Filter JWT buatan sendiri diganti dengan mekanisme Spring Security OAuth2 Resource Server. Token tetap diterbitkan service menggunakan `JwtEncoder` Spring Security.
 - Implementasi dan dependency JWT lama dihapus. Konfigurasi Swagger custom dihapus dan dokumentasi API menggunakan default springdoc.
 - ID yang sebelumnya dihitung dari jumlah user diganti UUID agar tidak rawan bentrok.
@@ -248,7 +253,7 @@ Saat ini aturan URL mensyaratkan token valid untuk endpoint non-publik. Role sud
 
 ## Menjalankan aplikasi
 
-Kebutuhan: Java 18, Maven, dan PostgreSQL yang dapat diakses aplikasi.
+Kebutuhan: JDK 25, Maven yang berjalan dengan JDK 25, dan PostgreSQL yang dapat diakses aplikasi.
 
 Sebelum menjalankan aplikasi, buat key lokal di macOS/Linux:
 

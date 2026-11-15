@@ -15,7 +15,7 @@
 	<description>REST API for user identity, authentication, and JWT access tokens</description>
 
 	<properties>
-		<java.version>18</java.version>
+		<java.version>25</java.version>
 	</properties>
 
 	<dependencies>
